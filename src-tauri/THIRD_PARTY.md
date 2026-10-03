@@ -13,3 +13,9 @@
 
 These tools are separate executables. The build preparation script downloads
 versioned release assets and verifies their SHA-256 checksums before bundling.
+
+Windows and macOS use the official yt-dlp and Deno executables at the same
+versions, and FFmpeg/ffprobe binaries from
+https://github.com/descriptinc/ffmpeg-ffprobe-static/releases/tag/b6.1.2-rc.1.
+FFmpeg's license information is included as `FFmpeg-LICENSE.txt` and
+`FFmpeg-GPLv3.txt`; see the upstream release for its build/source details.

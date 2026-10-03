@@ -2,12 +2,25 @@
 
 A desktop-first video downloader built with Tauri 2, TypeScript, Rust, `yt-dlp`, FFmpeg, and Deno.
 
+## Download and install
+
+Download the latest release from [GitHub Releases](https://github.com/Loedn/framegrab/releases):
+
+| System | Download | Install |
+| --- | --- | --- |
+| Windows x64 | `.exe` (NSIS) | Run the installer. |
+| macOS Apple Silicon | `aarch64.dmg` | Open the disk image and drag Framegrab to Applications. |
+| macOS Intel | `x64.dmg` | Open the disk image and drag Framegrab to Applications. |
+| Linux x64 | `.AppImage` | Make it executable and run it; optionally click **Add to applications** in the app. |
+
+The Windows and macOS installers are currently **unsigned previews**. Windows SmartScreen and macOS Gatekeeper may warn or block them. Signing/notarization requires platform certificates that are not configured in this repository. There is no mobile installer yet.
+
 ## Try it on Arch Linux
 
 Run the built AppImage:
 
 ```sh
-./src-tauri/target/release/bundle/appimage/Framegrab_0.1.1_amd64.AppImage
+./src-tauri/target/release/bundle/appimage/Framegrab_0.2.0_amd64.AppImage
 ```
 
 **No separate `yt-dlp`, FFmpeg, ffprobe, or Deno installation is needed.** Verified standalone copies are inside the AppImage and the app calls them by their bundled paths, not through your system `PATH`. The AppImage was built and launched on x86_64 Arch. If your system cannot mount AppImages without FUSE, use `APPIMAGE_EXTRACT_AND_RUN=1` before the command above. Pick a folder in the app, paste a public video link, and add it to the queue. Downloads run one at a time, with progress and cancellation.
@@ -18,7 +31,7 @@ The first release accepts HTTPS links from YouTube, Instagram, TikTok, X/Twitter
 
 ## Develop
 
-Build prerequisites: Node.js, npm, Rust, the [Tauri 2 Linux prerequisites](https://v2.tauri.app/start/prerequisites/#linux), and `curl`, `tar`, `unzip`, and `sha256sum`. The first build downloads version-pinned Linux x86_64 executables and verifies SHA-256 checksums; later builds use the local `.sidecar-downloads/` cache. The app itself does not need these build tools installed separately.
+Build prerequisites: Node.js, npm, Rust, and the [Tauri 2 platform prerequisites](https://v2.tauri.app/start/prerequisites/). The first build downloads version-pinned platform executables and verifies SHA-256 checksums; later builds use the local `.sidecar-downloads/` cache. Linux x64 also needs `curl`, `tar`, `unzip`, and `sha256sum` for its build script. The installed app itself does not need these build tools.
 
 ```sh
 npm install
@@ -38,7 +51,7 @@ npm run build
 npm test
 ```
 
-The UI and Rust backend are structured for Windows and macOS builds, but **only the Linux x86_64 AppImage has been built and smoke-tested so far**. Other platforms will need matching, verified sidecar binaries and build scripts. The FFmpeg static build is GPLv3; its license text and third-party source information are included in the bundle. Mobile is out of scope for this first version.
+The Windows NSIS and macOS DMG installers are built on their native GitHub Actions runners. A push of a `v*` tag builds all four installers, then publishes a prerelease with all downloads only after every build succeeds. Platform-specific bundled executables are pinned by SHA-256. FFmpeg license text and third-party source information are included in each bundle. macOS and Windows installers cannot be run or fully tested on this Arch host; the release workflow smoke-tests the tools on their native runners.
 
 ## Current limitations
 

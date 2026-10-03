@@ -1,0 +1,91 @@
+name: Release desktop installers
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            runner: ubuntu-22.04
+            bundle: appimage
+            artifact: linux-x64
+            path: src-tauri/target/release/bundle/appimage/*.AppImage
+          - name: Windows x64
+            runner: windows-2022
+            bundle: nsis
+            artifact: windows-x64
+            path: src-tauri/target/release/bundle/nsis/*.exe
+          - name: macOS Apple Silicon
+            runner: macos-15-arm64
+            bundle: dmg
+            artifact: macos-arm64
+            path: src-tauri/target/release/bundle/dmg/*.dmg
+          - name: macOS Intel
+            runner: macos-15-intel
+            bundle: dmg
+            artifact: macos-x64
+            path: src-tauri/target/release/bundle/dmg/*.dmg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Install Linux build prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev libfuse2
+      - name: Install dependencies
+        run: npm ci
+      - name: Prepare bundled download tools
+        run: npm run prepare:sidecars
+      - name: Smoke-test bundled download tools
+        run: node scripts/check-sidecars.mjs
+      - name: Build installer
+        run: npm run tauri -- build --bundles ${{ matrix.bundle }}
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          path: release
+          merge-multiple: true
+      - name: Publish installers
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          fail_on_unmatched_files: true
+          prerelease: true
+          body: |
+            Framegrab desktop installers for Linux x64, Windows x64, macOS Apple Silicon, and macOS Intel.
+
+            These preview installers are not code signed or notarized. Windows SmartScreen and macOS Gatekeeper may warn when opening them. Bundled yt-dlp, FFmpeg, ffprobe, and Deno are included; no separate download tools are required.

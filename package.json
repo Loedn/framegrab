@@ -1,14 +1,14 @@
 {
   "name": "social-downloader",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "tauri": "tauri",
-    "prepare:linux": "sh scripts/prepare-linux-sidecars.sh",
-    "test": "npm run prepare:linux && cargo test --manifest-path src-tauri/Cargo.toml"
+    "prepare:sidecars": "node scripts/prepare-sidecars.mjs",
+    "test": "npm run prepare:sidecars && cargo test --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
+    "fflate": "^0.8.3",
     "typescript": "^5.7.0",
     "vite": "^6.0.0"
   }

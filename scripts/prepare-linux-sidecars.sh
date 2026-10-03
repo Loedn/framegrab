@@ -48,6 +48,7 @@ for tool in ffmpeg ffprobe; do
 done
 tar -xJOf "$cache/ffmpeg-$ff_version-amd64-static.tar.xz" \
   "ffmpeg-$ff_version-amd64-static/GPLv3.txt" > "$dest/FFmpeg-GPLv3.txt"
+cp "$root/src-tauri/licenses/FFmpeg-LICENSE.txt" "$dest/FFmpeg-LICENSE.txt"
 unzip -p "$cache/deno-x86_64-unknown-linux-gnu.zip" deno > "$dest/deno-$triple"
 chmod 755 "$dest/deno-$triple"
 
