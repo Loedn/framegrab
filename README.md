@@ -21,7 +21,7 @@ The Windows and macOS installers are currently **unsigned previews**. Windows Sm
 Run the built AppImage:
 
 ```sh
-./src-tauri/target/release/bundle/appimage/Framegrab_0.3.0_amd64.AppImage
+./src-tauri/target/release/bundle/appimage/Framegrab_0.3.1_amd64.AppImage
 ```
 
 **No separate `yt-dlp`, FFmpeg, ffprobe, or Deno installation is needed.** Verified standalone copies are inside the AppImage and the app calls them by their bundled paths, not through your system `PATH`. The AppImage was built and launched on x86_64 Arch. If your system cannot mount AppImages without FUSE, use `APPIMAGE_EXTRACT_AND_RUN=1` before the command above. Pick a folder in the app, paste a public video link, and add it to the queue. Downloads run one at a time, with progress and cancellation.
