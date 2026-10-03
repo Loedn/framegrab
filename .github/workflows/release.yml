@@ -1,4 +1,4 @@
-name: Release desktop installers
+name: Release desktop installers and Android APK
 
 on:
   push:
@@ -78,9 +78,68 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  android:
+    name: Build signed Android arm64 APK
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: "3.13"
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK and NDK
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: Load release signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" && test -n "$ANDROID_KEYSTORE_PASSWORD"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/framegrab-release.keystore"
+          chmod 600 "$RUNNER_TEMP/framegrab-release.keystore"
+      - name: Build signed APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/framegrab-release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          FRAMEGRAB_BUILD_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+        run: |
+          export NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+          npm run tauri -- android build --apk --target aarch64 --ci
+      - name: Verify and package APK
+        run: |
+          apk=src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk"
+          mkdir -p android-artifact
+          cp "$apk" android-artifact/Framegrab-Android-arm64.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-android-arm64
+          path: android-artifact/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
   publish:
     name: Publish GitHub release
-    needs: build
+    needs: [build, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -98,6 +157,8 @@ jobs:
           fail_on_unmatched_files: true
           prerelease: true
           body: |
-            Framegrab desktop installers for Linux x64, Windows x64, macOS Apple Silicon, and macOS Intel.
+            Framegrab desktop installers for Linux x64, Windows x64, macOS Apple Silicon, and macOS Intel, plus a signed Android arm64 preview APK (Android 10 or newer).
 
-            These preview installers are not code signed or notarized. Windows SmartScreen and macOS Gatekeeper may warn when opening them. Bundled yt-dlp, FFmpeg, ffprobe, and Deno are included; no separate download tools are required.
+            The Windows and macOS installers are not code signed or notarized; SmartScreen and Gatekeeper may warn when opening them. Desktop installers bundle yt-dlp, FFmpeg, ffprobe, and Deno; no separate download tools are required.
+
+            Android saves videos to Movies/Framegrab entirely on-device. It includes yt-dlp but not FFmpeg or a JavaScript runtime, so only direct MP4s with audio work. Links requiring separate audio/video streams, cookies, DRM, or unsupported site extractors will fail. X direct MP4 download and MediaStore save were exercised in an Android emulator; other sources and physical devices are not yet verified. Install the APK from GitHub Releases by allowing installs from your browser/file manager. The Android APK is signed with a separate stable preview key, not a Play Store certificate.

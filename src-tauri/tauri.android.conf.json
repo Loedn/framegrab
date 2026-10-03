@@ -1,0 +1,11 @@
+{
+  "identifier": "app.framegrab.mobile",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "bundle": {
+    "externalBin": [],
+    "resources": []
+  }
+}

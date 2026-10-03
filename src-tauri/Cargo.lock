@@ -823,9 +823,10 @@ dependencies = [
 
 [[package]]
 name = "framegrab"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.framegrab" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#0e1214</item>
+        <item name="android:navigationBarColor">#0e1214</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

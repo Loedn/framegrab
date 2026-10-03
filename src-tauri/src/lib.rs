@@ -1,4 +1,6 @@
+#[cfg(not(target_os = "android"))]
 use serde::Serialize;
+#[cfg(not(target_os = "android"))]
 use std::{
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
@@ -10,19 +12,26 @@ use std::{
     thread,
     time::Duration,
 };
+#[cfg(target_os = "android")]
+use tauri::Manager;
+#[cfg(not(target_os = "android"))]
 use tauri::{AppHandle, Emitter, Manager, State};
 use url::Url;
 
+#[cfg(not(target_os = "android"))]
 mod desktop_install;
 
+#[cfg(not(target_os = "android"))]
 struct ActiveJob {
     id: String,
     cancelled: Arc<AtomicBool>,
 }
 
+#[cfg(not(target_os = "android"))]
 #[derive(Default)]
 struct DownloadState(Mutex<Option<ActiveJob>>);
 
+#[cfg(not(target_os = "android"))]
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DownloadEvent {
@@ -63,6 +72,7 @@ fn supported_url(input: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(not(target_os = "android"))]
 fn emit(
     app: &AppHandle,
     id: &str,
@@ -81,6 +91,7 @@ fn emit(
     );
 }
 
+#[cfg(not(target_os = "android"))]
 fn bundled_tool(name: &str) -> Result<PathBuf, String> {
     let executable = std::env::current_exe()
         .map_err(|_| "Could not locate the application executable.".to_owned())?;
@@ -95,6 +106,7 @@ fn bundled_tool(name: &str) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 fn start_download(
     id: String,
@@ -137,6 +149,7 @@ fn start_download(
     Ok(id)
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 fn cancel_download(id: String, state: State<'_, DownloadState>) -> Result<(), String> {
     let active = state.0.lock().map_err(|_| "Download state unavailable.")?;
@@ -149,21 +162,72 @@ fn cancel_download(id: String, state: State<'_, DownloadState>) -> Result<(), St
     }
 }
 
+#[cfg(target_os = "android")]
+struct AndroidMedia(tauri::plugin::PluginHandle<tauri::Wry>);
+
+#[cfg(target_os = "android")]
+fn android_media_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    tauri::plugin::Builder::new("media")
+        .setup(|app, api| {
+            let handle = api.register_android_plugin("app.framegrab.mobile", "MediaPlugin")?;
+            app.manage(AndroidMedia(handle));
+            Ok(())
+        })
+        .build()
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+fn start_download(
+    id: String,
+    url: String,
+    directory: String,
+    media: tauri::State<'_, AndroidMedia>,
+) -> Result<String, String> {
+    let _ = directory;
+    supported_url(&url)?;
+    if !id.is_ascii() || id.len() != 36 || !id.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
+        return Err("Invalid download identifier.".into());
+    }
+    media
+        .0
+        .run_mobile_plugin::<serde_json::Value>(
+            "startDownload",
+            serde_json::json!({ "id": id, "url": url }),
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(id)
+}
+
+#[cfg(target_os = "android")]
+#[tauri::command]
+fn cancel_download(id: String, media: tauri::State<'_, AndroidMedia>) -> Result<(), String> {
+    media
+        .0
+        .run_mobile_plugin::<serde_json::Value>("cancelDownload", serde_json::json!({ "id": id }))
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 fn desktop_install_status() -> desktop_install::InstallStatus {
     desktop_install::status()
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 fn desktop_install_app() -> Result<(), String> {
     desktop_install::install()
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 fn desktop_uninstall_app() -> Result<(), String> {
     desktop_install::uninstall()
 }
 
+#[cfg(not(target_os = "android"))]
 fn run_download(
     app: &AppHandle,
     id: &str,
@@ -318,19 +382,31 @@ fn run_download(
     }
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
-        .manage(DownloadState::default())
-        .invoke_handler(tauri::generate_handler![
-            start_download,
-            cancel_download,
-            desktop_install_status,
-            desktop_install_app,
-            desktop_uninstall_app
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running Framegrab");
+    #[cfg(target_os = "android")]
+    {
+        tauri::Builder::default()
+            .plugin(android_media_plugin())
+            .invoke_handler(tauri::generate_handler![start_download, cancel_download])
+            .run(tauri::generate_context!())
+            .expect("error while running Framegrab");
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        tauri::Builder::default()
+            .plugin(tauri_plugin_dialog::init())
+            .manage(DownloadState::default())
+            .invoke_handler(tauri::generate_handler![
+                start_download,
+                cancel_download,
+                desktop_install_status,
+                desktop_install_app,
+                desktop_uninstall_app
+            ])
+            .run(tauri::generate_context!())
+            .expect("error while running Framegrab");
+    }
 }
 
 #[cfg(test)]

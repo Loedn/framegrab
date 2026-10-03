@@ -106,3 +106,30 @@ h2 { font-size: 22px; letter-spacing: -.7px; margin-top: 7px; }
 footer { margin-top: 40px; color: #66767b; font-size: 10px; line-height: 1.5; }
 @media (max-width: 900px) { .sidebar { flex-basis: 180px; } .topbar { padding: 0 32px; } .content { padding: 45px 32px 25px; } .destination-info span { max-width: 125px; } }
 @media (max-width: 750px) { .sidebar { flex-basis: 72px; align-items: center; padding-left: 8px; padding-right: 8px; } .brand { margin: 0 0 68px; } .brand > span, .side-label, .side-item > span, .side-foot, .version, .install-feedback, .install-action span { display: none; } .side-item { padding: 12px; } .install-panel { margin: 0 0 22px; } .composer-bottom { flex-wrap: wrap; } .primary-btn { margin-left: auto; } }
+body.android { min-width: 0; }
+body.android .shell { display: block; min-height: 100dvh; }
+body.android .sidebar { min-height: 0; height: auto; padding: calc(18px + max(24px, env(safe-area-inset-top, 0px))) 20px 12px; border-right: 0; border-bottom: 1px solid #222a2e; flex-direction: row; align-items: center; }
+body.android .brand { margin: 0; font-size: 20px; }
+body.android .brand > span { display: inline; }
+body.android .side-label, body.android .side-item, body.android .side-spacer, body.android .side-foot, body.android .version, body.android .install-panel, body.android .topbar { display: none; }
+body.android .content { padding: 26px 18px calc(96px + env(safe-area-inset-bottom, 0px)); }
+body.android .page-heading { margin-bottom: 25px; }
+body.android h1 { font-size: 32px; letter-spacing: -1.4px; }
+body.android .page-heading p { line-height: 1.6; max-width: 280px; }
+body.android .heading-decoration { display: none; }
+body.android .composer { padding: 18px; }
+body.android .label-hint { display: none; }
+body.android .url-row { margin-top: 14px; }
+body.android .url-row input { padding: 14px 11px; font-size: 12px; }
+body.android .paste-btn { padding: 0 10px; font-size: 0; }
+body.android .paste-btn svg { flex-shrink: 0; }
+body.android .composer-bottom { gap: 16px; flex-direction: column; align-items: stretch; }
+body.android .destination-info span { max-width: none; }
+body.android .primary-btn { width: 100%; margin: 0; padding: 15px; }
+body.android .sources { margin-top: 30px; }
+body.android .source-list { gap: 7px; }
+body.android .queue-section { margin-top: 38px; }
+body.android .queue-summary { display: none; }
+body.android .job { padding: 12px; gap: 10px; }
+body.android .job-message { max-width: 180px; }
+body.android footer { line-height: 1.7; }

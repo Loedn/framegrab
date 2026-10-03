@@ -1,4 +1,4 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { addPluginListener, invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import "./style.css";
@@ -27,6 +27,8 @@ const supportedHosts = [
   "x.com", "twitter.com", "instagram.com", "facebook.com", "fb.watch",
   "reddit.com", "redd.it", "tiktok.com", "youtube.com", "youtu.be",
 ];
+const android = isTauri() && /Android/i.test(navigator.userAgent);
+if (android) document.body.classList.add("android");
 
 const icons = {
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
@@ -56,21 +58,21 @@ app.innerHTML = `
         <div id="install-feedback" class="install-feedback" role="status"></div>
       </div>
       <div class="side-foot"><div class="ready-dot"></div><span>Ready to download</span></div>
-      <div class="version">FRAMEGRAB · DESKTOP 0.1</div>
+      <div class="version">FRAMEGRAB · ${android ? "ANDROID PREVIEW" : "DESKTOP"}</div>
     </aside>
     <main class="main">
-      <header class="topbar"><div class="crumb">Workspace <span>/</span> <strong>Downloads</strong></div><div class="platform-tag"><span class="tag-dot"></span> DESKTOP APP</div></header>
+      <header class="topbar"><div class="crumb">Workspace <span>/</span> <strong>Downloads</strong></div><div class="platform-tag"><span class="tag-dot"></span> ${android ? "ANDROID PREVIEW" : "DESKTOP APP"}</div></header>
       <div class="content">
         <div class="page-heading"><div><div class="eyebrow">YOUR MEDIA, YOUR WAY</div><h1>Download videos<span class="heading-period">.</span></h1><p>Drop in a link. Keep what matters, right on your device.</p></div><div class="heading-decoration">${icon("spark", 25)}</div></div>
         <section class="composer" aria-label="New download">
           <div class="composer-label"><span class="label-icon">${icon("link", 16)}</span> VIDEO LINK <span class="label-hint">Paste a public video URL to get started</span></div>
           <div class="url-row"><input id="url" type="url" spellcheck="false" autocomplete="off" placeholder="https://youtube.com/watch?v=..." aria-label="Video URL" /><button id="paste" class="paste-btn" type="button">${icon("clipboard", 17)} Paste</button></div>
-          <div class="composer-bottom"><div class="destination"><div class="destination-icon">${icon("folder", 17)}</div><div class="destination-info"><small>SAVE TO</small><span id="folder-label">Choose a destination folder</span></div><button id="choose-folder" class="choose-folder" type="button">Change folder ${icon("arrow", 15)}</button></div><button id="add" class="primary-btn" type="button">Add to queue ${icon("arrow", 18)}</button></div>
+          <div class="composer-bottom"><div class="destination"><div class="destination-icon">${icon("folder", 17)}</div><div class="destination-info"><small>SAVE TO</small><span id="folder-label">${android ? "Movies / Framegrab" : "Choose a destination folder"}</span></div>${android ? "" : `<button id="choose-folder" class="choose-folder" type="button">Change folder ${icon("arrow", 15)}</button>`}</div><button id="add" class="primary-btn" type="button">Add to queue ${icon("arrow", 18)}</button></div>
           <div id="form-error" role="alert" class="form-error" hidden></div>
         </section>
-        <section class="sources" aria-label="Supported platforms"><div class="section-kicker">WORKS WITH YOUR FAVORITES <span class="section-line"></span></div><div class="source-list">${sources.map((source) => `<div class="source-chip"><span class="source-icon ${source.className}">${source.label[0]}</span>${source.label}</div>`).join("")}</div></section>
+        <section class="sources" aria-label="Supported platforms"><div class="section-kicker">${android ? "COMPATIBLE LINKS VARY" : "WORKS WITH YOUR FAVORITES"} <span class="section-line"></span></div><div class="source-list">${sources.map((source) => `<div class="source-chip"><span class="source-icon ${source.className}">${source.label[0]}</span>${source.label}</div>`).join("")}</div></section>
         <section class="queue-section" aria-label="Download queue"><div class="queue-heading"><div><div class="section-kicker">ACTIVITY</div><h2>Download queue <span id="queue-count" class="queue-count">0</span></h2></div><span id="queue-summary" class="queue-summary">Nothing in the queue yet</span></div><div id="queue" class="queue"></div></section>
-        <footer>Only download videos you have permission to save. Availability depends on each platform.</footer>
+        <footer>${android ? "Android preview: only progressive MP4 videos with audio are supported. Some links and high-quality formats need FFmpeg or a JavaScript runtime and will not work yet. " : ""}Only download videos you have permission to save. Availability depends on each platform.</footer>
       </div>
     </main>
   </div>`;
@@ -80,7 +82,7 @@ const folderLabel = document.querySelector<HTMLSpanElement>("#folder-label")!;
 const errorElement = document.querySelector<HTMLDivElement>("#form-error")!;
 const queueElement = document.querySelector<HTMLDivElement>("#queue")!;
 const jobs: Job[] = [];
-let directory = localStorage.getItem("framegrab.directory") ?? "";
+let directory = android ? "Movies / Framegrab" : localStorage.getItem("framegrab.directory") ?? "";
 let activeId: string | null = null;
 let launching = false;
 let installStatus: InstallStatus = { available: false, installed: false };
@@ -228,7 +230,7 @@ async function cancelJob(job: Job): Promise<void> {
   }
 }
 
-document.querySelector<HTMLButtonElement>("#choose-folder")!.addEventListener("click", async () => {
+document.querySelector<HTMLButtonElement>("#choose-folder")?.addEventListener("click", async () => {
   try {
     const result = await open({ directory: true, multiple: false, title: "Choose download folder" });
     if (typeof result === "string") {
@@ -301,7 +303,7 @@ if (isTauri()) {
     installStatus = status;
     renderInstallAction();
   }).catch(() => {});
-  void listen<DownloadEvent>("download-event", ({ payload }) => {
+  const onDownloadEvent = (payload: DownloadEvent) => {
     const job = jobs.find((entry) => entry.id === payload.id);
     if (!job) return;
     job.status = payload.status;
@@ -312,7 +314,14 @@ if (isTauri()) {
       activeId = null;
       void launchNext();
     }
-  }).catch((error) => showError(`Could not monitor downloads: ${String(error)}`));
+  };
+  if (android) {
+    void addPluginListener<DownloadEvent>("media", "download-event", onDownloadEvent)
+      .catch((error) => showError(`Could not monitor downloads: ${String(error)}`));
+  } else {
+    void listen<DownloadEvent>("download-event", ({ payload }) => onDownloadEvent(payload))
+      .catch((error) => showError(`Could not monitor downloads: ${String(error)}`));
+  }
 }
 updateFolder();
 renderQueue();
