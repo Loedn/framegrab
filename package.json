@@ -1,0 +1,22 @@
+{
+  "name": "social-downloader",
+  "private": true,
+  "version": "0.1.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "tauri": "tauri",
+    "prepare:linux": "sh scripts/prepare-linux-sidecars.sh",
+    "test": "npm run prepare:linux && cargo test --manifest-path src-tauri/Cargo.toml"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}
